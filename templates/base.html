@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DevCareer AI{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+
+{% if messages %}
+<div class="fixed top-4 right-4 z-50 space-y-2" id="toast-container">
+    {% for message in messages %}
+    <div class="toast flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm
+        {% if message.tags == 'success' %}bg-green-600
+        {% elif message.tags == 'error' %}bg-red-600
+        {% else %}bg-indigo-600{% endif %}">
+        <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% elif message.tags == 'error' %}fa-circle-xmark{% else %}fa-circle-info{% endif %}"></i>
+        {{ message }}
+        <button onclick="this.parentElement.remove()" class="ml-2 opacity-70 hover:opacity-100">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    {% endfor %}
+</div>
+<script>
+    setTimeout(() => {
+        document.querySelectorAll('.toast').forEach(t => t.remove());
+    }, 4000);
+</script>
+{% endif %}
+
+{% block content %}{% endblock %}
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

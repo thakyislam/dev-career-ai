@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload Resume - DevCareer AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+
+    <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <div class="max-w-2xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'profile_setup' %}" class="text-gray-400 hover:text-gray-600 mr-1">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-robot text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-gray-900">DevCareer AI</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-2xl mx-auto px-6 py-10">
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-900">Upload Resume</h1>
+            <p class="text-gray-500 mt-1 text-sm">Your resume will be analyzed by AI to provide better career guidance.</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <form method="post" enctype="multipart/form-data" id="resume-form">
+                {% csrf_token %}
+                <div class="border-2 border-dashed border-gray-200 hover:border-indigo-400 rounded-xl p-10 text-center transition-colors cursor-pointer" id="drop-zone">
+                    <i class="fa-solid fa-file-pdf text-indigo-400 text-4xl mb-4"></i>
+                    <p class="text-gray-700 font-medium mb-1">Drop your PDF here or click to browse</p>
+                    <p class="text-gray-400 text-sm mb-4">PDF files only, max 10MB</p>
+                    <input type="file" name="file" accept=".pdf" required id="file-input" class="hidden">
+                    <button type="button" onclick="document.getElementById('file-input').click()"
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Choose File
+                    </button>
+                </div>
+                <div id="file-preview" class="hidden mt-4 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-file-pdf text-indigo-600"></i>
+                        <span id="file-name" class="text-sm text-indigo-800 font-medium"></span>
+                    </div>
+                    <button type="button" onclick="clearFile()" class="text-indigo-400 hover:text-indigo-600">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <button type="submit" id="submit-btn"
+                    class="mt-5 w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-upload"></i>
+                    Upload and Analyze
+                </button>
+            </form>
+        </div>
+
+        {% if resumes %}
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="font-semibold text-gray-900 mb-4">Upload History</h2>
+            <div class="space-y-3">
+                {% for resume in resumes %}
+                <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 {% if resume.is_active %}bg-green-100{% else %}bg-gray-100{% endif %} rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-file-pdf {% if resume.is_active %}text-green-600{% else %}text-gray-400{% endif %} text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ resume.filename }}</p>
+                            <p class="text-xs text-gray-400">{{ resume.uploaded_at|date:"M d, Y - H:i" }}</p>
+                        </div>
+                    </div>
+                    {% if resume.is_active %}
+                    <span class="text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-medium">Active</span>
+                    {% else %}
+                    <span class="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">Archived</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const fileName = document.getElementById('file-name');
+    const dropZone = document.getElementById('drop-zone');
+
+    fileInput.addEventListener('change', function() {
+        if (this.files[0]) showFile(this.files[0].name);
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-indigo-400'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-400'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-400');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'application/pdf') {
+            fileInput.files = e.dataTransfer.files;
+            showFile(file.name);
+        }
+    });
+
+    function showFile(name) {
+        fileName.textContent = name;
+        filePreview.classList.remove('hidden');
+    }
+
+    function clearFile() {
+        fileInput.value = '';
+        filePreview.classList.add('hidden');
+    }
+
+    document.getElementById('resume-form').addEventListener('submit', function() {
+        const btn = document.getElementById('submit-btn');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+        btn.disabled = true;
+    });
+</script>
+{% endblock %}

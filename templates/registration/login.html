@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In - DevCareer AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-indigo-950 via-indigo-900 to-purple-900 flex items-center justify-center px-4">
+    <div class="w-full max-w-md">
+
+        <div class="text-center mb-8">
+            <a href="/" class="inline-flex items-center gap-2 text-white mb-6">
+                <div class="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-robot text-white"></i>
+                </div>
+                <span class="font-bold text-xl">DevCareer AI</span>
+            </a>
+            <h1 class="text-2xl font-bold text-white">Welcome back</h1>
+            <p class="text-indigo-300 mt-1 text-sm">Sign in to your account</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-8 shadow-2xl">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-lg mb-5 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                    Invalid username or password.
+                </div>
+                {% endif %}
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                    <input type="text" name="username" autofocus required
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <input type="password" name="password" required
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                    Sign In
+                </button>
+            </form>
+
+            <p class="text-center text-sm text-gray-500 mt-5">
+                No account?
+                <a href="/register/" class="text-indigo-600 hover:text-indigo-500 font-medium">Create one free</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

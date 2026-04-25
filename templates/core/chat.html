@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat - DevCareer AI{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style type="text/tailwindcss">
+    .prose-chat h1, .prose-chat h2, .prose-chat h3 { font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+    .prose-chat h1 { font-size: 1.25rem; }
+    .prose-chat h2 { font-size: 1.1rem; }
+    .prose-chat h3 { font-size: 1rem; }
+    .prose-chat p { margin-bottom: 0.75rem; line-height: 1.65; }
+    .prose-chat ul, .prose-chat ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .prose-chat li { margin-bottom: 0.25rem; }
+    .prose-chat ul { list-style-type: disc; }
+    .prose-chat ol { list-style-type: decimal; }
+    .prose-chat code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; font-family: monospace; }
+    .prose-chat pre { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; margin-bottom: 0.75rem; }
+    .prose-chat pre code { background: transparent; padding: 0; color: inherit; font-size: 0.875rem; }
+    .prose-chat strong { font-weight: 600; }
+    .prose-chat blockquote { border-left: 3px solid #6366f1; padding-left: 1rem; color: #64748b; margin: 0.75rem 0; }
+    .prose-chat a { color: #6366f1; text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+
+    <!-- Sidebar -->
+    <div class="w-72 bg-gray-900 flex flex-col flex-shrink-0">
+
+        <!-- Logo -->
+        <div class="px-5 py-4 border-b border-gray-800">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-robot text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-white">DevCareer AI</span>
+            </div>
+        </div>
+
+        <!-- New Chat Button -->
+        <div class="px-4 pt-4 pb-2">
+            <form method="post" action="{% url 'new_conversation' %}">
+                {% csrf_token %}
+                <button type="submit"
+                    class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-plus"></i> New Chat
+                </button>
+            </form>
+        </div>
+
+        <!-- Conversations List -->
+        <div class="flex-1 overflow-y-auto px-3 py-2">
+            {% if conversations %}
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider px-2 mb-2">Conversations</p>
+            {% for conv in conversations %}
+            <div class="group flex items-center gap-1 mb-1 rounded-lg {% if current_conversation and current_conversation.id == conv.id %}bg-gray-700{% else %}hover:bg-gray-800{% endif %} transition-colors">
+                <a href="{% url 'chat_conversation' conv.id %}"
+                    class="flex-1 flex items-center gap-2 px-3 py-2.5 min-w-0">
+                    <i class="fa-regular fa-comment text-gray-400 text-xs flex-shrink-0"></i>
+                    <span class="text-sm text-gray-300 truncate">{{ conv.title }}</span>
+                </a>
+                <form method="post" action="{% url 'delete_conversation' conv.id %}" class="pr-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Delete this conversation?')"
+                        class="p-1.5 text-gray-500 hover:text-red-400 rounded transition-colors">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-8">
+                <i class="fa-regular fa-comment-dots text-gray-600 text-2xl mb-2"></i>
+                <p class="text-gray-500 text-xs">No conversations yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bottom Actions -->
+        <div class="border-t border-gray-800 px-4 py-3 space-y-1">
+            <a href="{% url 'profile_setup' %}"
+                class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg text-sm transition-colors">
+                <i class="fa-solid fa-user-gear w-4 text-center"></i>
+                <span>Profile Settings</span>
+            </a>
+            <a href="{% url 'resume_upload' %}"
+                class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg text-sm transition-colors">
+                <i class="fa-solid fa-file-pdf w-4 text-center"></i>
+                <span>Upload Resume</span>
+            </a>
+            <form method="post" action="/logout/">
+                {% csrf_token %}
+                <button type="submit"
+                    class="w-full flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg text-sm transition-colors">
+                    <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                    <span>Logout ({{ request.user.username }})</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+        <!-- Chat Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between">
+            <div>
+                <h1 class="font-semibold text-gray-900 text-sm">
+                    {% if current_conversation %}{{ current_conversation.title }}{% else %}New Chat{% endif %}
+                </h1>
+                <p class="text-xs text-gray-400 mt-0.5">AI Career Assistant</p>
+            </div>
+            {% if not profile_complete %}
+            <a href="{% url 'profile_setup' %}"
+                class="flex items-center gap-2 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Complete profile for better guidance
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Messages Area -->
+        <div class="flex-1 overflow-y-auto" id="messages-container">
+            <div class="max-w-3xl mx-auto px-4 py-6" id="messages-list">
+
+                {% if not chat_messages %}
+                <!-- Welcome State -->
+                <div id="welcome-state" class="text-center py-16">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                        <i class="fa-solid fa-robot text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">How can I help your career today?</h2>
+                    <p class="text-gray-500 text-sm mb-8 max-w-sm mx-auto">Ask me about skill gaps, resume review, interview prep, or job search strategies.</p>
+                    <div class="grid grid-cols-2 gap-3 max-w-lg mx-auto">
+                        {% for prompt in starter_prompts %}
+                        <button onclick="useStarter(this)" data-prompt="{{ prompt }}"
+                            class="starter-btn text-left px-4 py-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl text-sm text-gray-700 transition-colors">
+                            {{ prompt }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% else %}
+                <!-- Existing Messages -->
+                {% for msg in chat_messages %}
+                <div class="message mb-6 {% if msg.role == 'user' %}flex justify-end{% else %}flex justify-start{% endif %}">
+                    {% if msg.role == 'assistant' %}
+                    <div class="flex items-start gap-3 max-w-2xl">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fa-solid fa-robot text-white text-xs"></i>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm">
+                            <div class="prose-chat text-sm text-gray-800 leading-relaxed message-content">{{ msg.content }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="max-w-xl">
+                        <div class="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-5 py-3.5 text-sm leading-relaxed">
+                            {{ msg.content }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                <!-- Typing Indicator (hidden by default) -->
+                <div id="typing-indicator" class="hidden mb-6 flex justify-start">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fa-solid fa-robot text-white text-xs"></i>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm">
+                            <div class="flex items-center gap-1.5">
+                                <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay:0ms"></div>
+                                <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay:150ms"></div>
+                                <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay:300ms"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="bg-white border-t border-gray-200 px-4 py-4">
+            <div class="max-w-3xl mx-auto">
+                <div class="flex items-end gap-3 bg-gray-50 border border-gray-200 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 rounded-2xl px-4 py-3 transition-all">
+                    <textarea id="message-input" rows="1" placeholder="Ask about your career, skills, resume, or interview prep..."
+                        class="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none max-h-40 leading-relaxed"></textarea>
+                    <button id="send-btn" onclick="sendMessage()"
+                        class="bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-300 text-white w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+                <p class="text-center text-xs text-gray-400 mt-2">AI can make mistakes. Verify important career decisions independently.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const conversationId = {{ current_conversation.id|default:'null' }};
+    let currentConversationId = conversationId;
+
+    // Configure marked for safe rendering
+    marked.setOptions({ breaks: true, gfm: true });
+
+    // Render existing assistant messages as markdown
+    document.querySelectorAll('.message-content').forEach(el => {
+        el.innerHTML = marked.parse(el.textContent);
+    });
+
+    // Auto-scroll to bottom on load
+    scrollToBottom();
+
+    // Auto-resize textarea
+    const textarea = document.getElementById('message-input');
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+    });
+
+    // Send on Enter (Shift+Enter = newline)
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    function useStarter(btn) {
+        textarea.value = btn.dataset.prompt;
+        textarea.dispatchEvent(new Event('input'));
+        textarea.focus();
+    }
+
+    function scrollToBottom() {
+        const container = document.getElementById('messages-container');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function appendMessage(role, content) {
+        const welcome = document.getElementById('welcome-state');
+        if (welcome) welcome.remove();
+
+        const list = document.getElementById('messages-list');
+        const div = document.createElement('div');
+        div.className = `message mb-6 flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+
+        if (role === 'user') {
+            div.innerHTML = `
+                <div class="max-w-xl">
+                    <div class="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-5 py-3.5 text-sm leading-relaxed">${escapeHtml(content)}</div>
+                </div>`;
+        } else {
+            div.innerHTML = `
+                <div class="flex items-start gap-3 max-w-2xl">
+                    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="fa-solid fa-robot text-white text-xs"></i>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm">
+                        <div class="prose-chat text-sm text-gray-800 leading-relaxed">${marked.parse(content)}</div>
+                    </div>
+                </div>`;
+        }
+
+        const typing = document.getElementById('typing-indicator');
+        list.insertBefore(div, typing);
+        scrollToBottom();
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function sendMessage() {
+        const input = textarea.value.trim();
+        if (!input) return;
+
+        const btn = document.getElementById('send-btn');
+        textarea.value = '';
+        textarea.style.height = 'auto';
+        btn.disabled = true;
+
+        appendMessage('user', input);
+
+        const typing = document.getElementById('typing-indicator');
+        typing.classList.remove('hidden');
+        scrollToBottom();
+
+        try {
+            const res = await fetch('{% url "send_message" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({
+                    message: input,
+                    conversation_id: currentConversationId,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Request failed');
+            }
+
+            typing.classList.add('hidden');
+            appendMessage('assistant', data.response);
+
+            // Update URL if new conversation was created
+            if (!currentConversationId && data.conversation_id) {
+                currentConversationId = data.conversation_id;
+                history.pushState({}, '', `/chat/${data.conversation_id}/`);
+                // Update page title
+                document.querySelector('.font-semibold.text-gray-900.text-sm').textContent = data.conversation_title;
+            }
+
+        } catch (err) {
+            typing.classList.add('hidden');
+            appendMessage('assistant', `Sorry, something went wrong: ${err.message}. Please try again.`);
+        }
+
+        btn.disabled = false;
+        textarea.focus();
+    }
+</script>
+{% endblock %}
